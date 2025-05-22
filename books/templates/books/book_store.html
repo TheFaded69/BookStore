@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="filters">
+        <form method="get" action=".">
+            <!-- Поиск -->
+            <input type="text" name="q" value="{{ current_filters.q }}" placeholder="Поиск по книгам...">
+
+            <!-- Фильтр по цене -->
+            <input type="number" name="min_price" value="{{ current_filters.min_price }}" placeholder="Мин. цена">
+            <input type="number" name="max_price" value="{{ current_filters.max_price }}" placeholder="Макс. цена">
+
+            <!-- Фильтр по типам -->
+            <h4>Типы книг:</h4>
+            {% for type in book_types %}
+                <label>
+                    <input type="checkbox" name="types" value="{{ type.id }}"
+                        {% if type.id|slugify in current_filters.types %}checked{% endif %}>
+                    {{ type.book_type }}
+                </label>
+            {% endfor %}
+
+            <!-- Фильтр по авторам -->
+            <h4>Авторы:</h4>
+            {% for author in authors %}
+                <label>
+                    <input type="checkbox" name="authors" value="{{ author.id }}"
+                        {% if author.id|slugify in current_filters.authors %}checked{% endif %}>
+                    {{ author.last_name }} {{ author.first_name }}
+                </label>
+            {% endfor %}
+
+            <button type="submit">Применить фильтры</button>
+        </form>
+    </div>
+
+    <div class="books-grid">
+        {% for book in books %}
+            <div class="book-card">
+                <a href="{% url 'book_detail' book.id %}">
+                    <img src="{{ book.cover.url }}" alt="{{ book.name }}" width="200">
+                </a>
+                <h3>{{ book.name }}</h3>
+                <p>Авторы:
+                    {% for author in book.authors.all %}
+                        {{ author.last_name }} {{ author.first_name }}
+                    {% endfor %}
+                </p>
+                <p>Цена: {{ book.price }} ₽</p>
+                <form action="{% url 'add_to_cart' book.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit">Добавить в корзину</button>
+                </form>
+            </div>
+        {% empty %}
+            <p>Книги не найдены.</p>
+        {% endfor %}
+    </div>
+{% endblock %}

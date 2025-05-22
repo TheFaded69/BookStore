@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'carts.apps.CartsConfig',
-    'books.apps.BooksConfig'
+    'books.apps.BooksConfig',
+    'home'
 ]
 
 MIDDLEWARE = [
@@ -61,7 +62,8 @@ TEMPLATES = [
             BASE_DIR / 'templates',
             BASE_DIR / 'users' / 'templates',
             BASE_DIR / 'books' / 'templates',
-            BASE_DIR / 'carts' / 'templates'
+            BASE_DIR / 'carts' / 'templates',
+            BASE_DIR / 'home' / 'templates',
             ],
         'APP_DIRS': True,
         'OPTIONS': {

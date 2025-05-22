@@ -1,18 +1,44 @@
+<!-- templates/base.html -->
+{% load static %}
+
 <!DOCTYPE html>
-<html lang="rus">
+<html lang="ru">
 <head>
-    <title>{% block title %}{% endblock %}</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 's' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Тестовый магазин книг{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <nav>
-        <a href="{% url 'home' %}">Главная</a>
-        <a href="{% url 'about' %}">О нас</a>
-        <a href="{% url 'contact' %}">Контакт</a>
+    <header class="site-header">
+        {% block header %}
+            <h1>Книжный магазин</h1>
+        {% endblock %}
+    </header>
+
+    <!-- Navigation -->
+    <nav class="site-nav">
+        {% block nav %}
+            <ul>
+                <li><a href="/books/book_store/">Магазин</a></li>
+                <li><a href="/cart/">Корзина</a></li>
+                <li><a href="/profile/">Профиль</a></li>
+            </ul>
+        {% endblock %}
     </nav>
-    <main>
-        {% block content %}{% endblock %}
+
+    <!-- Main Content -->
+    <main class="site-main">
+        {% block content %}
+
+        {% endblock %}
     </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        {% block footer %}
+            <p>&copy; 2025 Book store mf</p>
+        {% endblock %}
+    </footer>
 </body>
 </html>
