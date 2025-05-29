@@ -1,0 +1,54 @@
+﻿{% extends "base.html" %}
+{% block title %}Корзина{% endblock %}
+{% block content %}
+    <h2>Ваша корзина</h2>
+
+    {% if cart_items %}
+        <div class="cart-grid">
+            {% for item in cart_items %}
+                <div class="book-card">
+                    <h3>{{ item.book.name }}</h3>
+                    <p><strong>Автор:</strong>
+                        {% for author in item.book.authors.all %}
+                            {{ author.first_name }} {{ author.last_name }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    <p><strong>Цена:</strong> {{ item.book.price }} ₽</p>
+                    <p><strong>Сумма:</strong> {{ item.quantity|floatformat:2 }} × {{ item.book.price|floatformat:2 }} = {{ item.get_total_price|floatformat:2 }} ₽</p>
+
+                    <div class="cart-controls">
+                        <button onclick="updateCart('{{ item.book.id }}', -1)">−</button>
+                        <span class="quantity" id="qty-{{ item.book.id }}">{{ item.quantity }}</span>
+                        <button onclick="updateCart('{{ item.book.id }}', 1)">+</button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="total-summary">
+            <h3>Итого: <span id="total-price">{{ total_price|floatformat:2 }} ₽</span></h3>
+        </div>
+    {% else %}
+        <p>Ваша корзина пуста.</p>
+    {% endif %}
+
+
+<script>
+function updateCart(bookId, delta) {
+    fetch(`/carts/update/${bookId}/${delta}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Ошибка сети");
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById(`qty-${bookId}`).textContent = data.quantity;
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Не удалось обновить корзину');
+        });
+}
+</script>
+{% endblock %}

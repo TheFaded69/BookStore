@@ -1,10 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h1>{{ book.name }}</h1>
+    <p><strong>Автор:</strong>
+        {% for author in book.authors.all %}
+            {{ author.first_name }} {{ author.last_name }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    <p><strong>Тип:</strong>
+        {% for t in book.book_type.all %}
+            {{ t.book_type }}{% if not forloop.last %}, {% endif %}
+        {% endfor %}
+    </p>
+    <p><strong>Цена:</strong> {{ book.price }} ₽</p>
 
-</body>
-</html>
+    <div class="cart-controls">
+        <button onclick="updateCart('{{ book.id }}', -1)">−</button>
+        <span class="quantity" id="qty-{{ book.id }}">{{ cart_item_quantity|default:0 }}</span>
+        <button onclick="updateCart('{{ book.id }}', 1)">+</button>
+
+    </div>
+</div>
+
+<script>
+function updateCart(bookId, delta) {
+    fetch(`/carts/update/${bookId}/${delta}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Ошибка сети");
+            }
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById(`qty-${bookId}`).textContent = data.quantity;
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Не удалось обновить корзину');
+        });
+}
+</script>
+{% endblock %}
