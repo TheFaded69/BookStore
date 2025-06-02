@@ -1,19 +1,10 @@
-from asyncore import write
-
 from django.shortcuts import render, get_object_or_404 , redirect
-from django.http import JsonResponse
-
-from books.models import Book
-from .models import Cart, CartItem
-
-import json
-from django.http import JsonResponse
 from django.views import View
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+
 from books.models import Book
 from .models import Cart, CartItem
 
+#todo func to CBV
 def carts(request):
     try:
         user = request.user

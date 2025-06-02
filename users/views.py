@@ -3,6 +3,7 @@ from django.contrib.auth import login, logout
 from .forms import RegisterForm, LoginForm
 
 
+#todo to CBV???
 def register_view(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)

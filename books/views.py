@@ -1,18 +1,16 @@
 from django.views.generic import ListView
-from books.models import Book, Author, BookType
-from carts.models import CartItem
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import DetailView
-from books.models import Book
-from carts.models import Cart, CartItem
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponseBadRequest
+
+from books.models import Book, Author, BookType
+from carts.models import Cart, CartItem
 
 class BookStoreView(ListView):
     model = Book
     template_name = 'books/book_store.html'
     context_object_name = 'books'
-    paginate_by = None  # или 10 для пагинации
+    paginate_by = None
 
     def get_queryset(self):
         queryset = super().get_queryset().prefetch_related('authors', 'book_type')
@@ -25,13 +23,10 @@ class BookStoreView(ListView):
 
         if name_query:
             queryset = queryset.filter(name__icontains=name_query)
-
         if author_id:
             queryset = queryset.filter(authors__id=author_id)
-
         if type_id:
             queryset = queryset.filter(book_type__id=type_id)
-
         if min_price:
             queryset = queryset.filter(price__gte=min_price)
         if max_price:
@@ -58,7 +53,7 @@ class BookStoreView(ListView):
                 cart_items = cart.items.select_related('book').all()
                 cart_data = {item.book.id: item.quantity for item in cart_items}
             except Cart.DoesNotExist:
-                pass
+                pass #todo
 
         context['cart_data'] = cart_data
 
@@ -84,7 +79,7 @@ class BookDetailView(DetailView):
                 cart = self.request.user.carts.get()
                 context['cart_item'] = cart.items.get(book=self.object)
             except CartItem.DoesNotExist:
-                pass
+                pass #todo
 
         return context
 
