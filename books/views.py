@@ -1,47 +1,92 @@
-from django.core.handlers.wsgi import WSGIRequest
-from django.http import HttpResponseBadRequest, HttpResponse
-from django.shortcuts import render, get_object_or_404
-from .models import Book, Author, BookType
-
+from django.views.generic import ListView
+from books.models import Book, Author, BookType
+from carts.models import CartItem
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import DetailView
 from books.models import Book
-from users.forms import RegisterForm
+from carts.models import Cart, CartItem
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponseBadRequest
 
+class BookStoreView(ListView):
+    model = Book
+    template_name = 'books/book_store.html'
+    context_object_name = 'books'
+    paginate_by = None  # или 10 для пагинации
 
-def book_store(request):
-    author_id = request.GET.get('author')
-    type_id = request.GET.get('type')
-    min_price = request.GET.get('min_price')
-    max_price = request.GET.get('max_price')
+    def get_queryset(self):
+        queryset = super().get_queryset().prefetch_related('authors', 'book_type')
 
-    books = Book.objects.all()
+        name_query = self.request.GET.get('name')
+        author_id = self.request.GET.get('author')
+        type_id = self.request.GET.get('type')
+        min_price = self.request.GET.get('min_price')
+        max_price = self.request.GET.get('max_price')
 
-    if author_id:
-        books = books.filter(authors__id=author_id)
-    if type_id:
-        books = books.filter(book_type__id=type_id)
-    if min_price:
-        books = books.filter(price__gte=min_price)  # price >= min_price
-    if max_price:
-        books = books.filter(price__lte=max_price)  # price <= max_price
+        if name_query:
+            queryset = queryset.filter(name__icontains=name_query)
 
-    books = books.distinct().prefetch_related('authors', 'book_type')
+        if author_id:
+            queryset = queryset.filter(authors__id=author_id)
 
-    authors = Author.objects.all()
-    book_types = BookType.objects.all()
+        if type_id:
+            queryset = queryset.filter(book_type__id=type_id)
 
-    return render(request, 'books/book_store.html', {
-        'books': books,
-        'authors': authors,
-        'book_types': book_types,
-    })
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
 
-def book(request: WSGIRequest, book_id) -> HttpResponse :
-    try:
-        if request.method == "GET":
-            book_detail = get_object_or_404(Book, id=book_id)
-            return render(request, 'books/book.html', {'book': book_detail})
-        else:
-            return HttpResponseBadRequest()
-    except:
-        return HttpResponseBadRequest()
+        return queryset.distinct()
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['authors'] = Author.objects.all()
+        context['book_types'] = BookType.objects.all()
+
+        context['name_query'] = self.request.GET.get('name', '')
+        context['author_id'] = self.request.GET.get('author', '')
+        context['type_id'] = self.request.GET.get('type', '')
+        context['min_price'] = self.request.GET.get('min_price', '')
+        context['max_price'] = self.request.GET.get('max_price', '')
+
+        cart_data = {}
+        if self.request.user.is_authenticated:
+            try:
+                cart = self.request.user.carts.get()
+                cart_items = cart.items.select_related('book').all()
+                cart_data = {item.book.id: item.quantity for item in cart_items}
+            except Cart.DoesNotExist:
+                pass
+
+        context['cart_data'] = cart_data
+
+        return context
+
+class BookDetailView(DetailView):
+    model = Book
+    template_name = 'books/book.html'
+    context_object_name = 'book'
+    slug_field = 'id'
+    slug_url_kwarg = 'book_id'
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(Book, id=self.kwargs['book_id'])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['cart_item'] = None
+
+        if self.request.user.is_authenticated:
+            try:
+                cart = self.request.user.carts.get()
+                context['cart_item'] = cart.items.get(book=self.object)
+            except CartItem.DoesNotExist:
+                pass
+
+        return context
+
+    def http_method_not_allowed(self, request, *args, **kwargs):
+        return HttpResponseBadRequest("Неподдерживаемый метод запроса")

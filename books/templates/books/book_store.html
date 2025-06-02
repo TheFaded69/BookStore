@@ -1,15 +1,19 @@
+<!-- templates/books/book_store.html -->
 {% extends "base.html" %}
+{% load cart_extras %}
+{% load static %}
 {% block content %}
 <div class="container">
     <h1>Каталог книг</h1>
 
-    <!-- Форма фильтрации -->
-    <form method="get" id="filter-form">
-        <div class="filters">
+    <form method="get" id="filter-form" class="filters">
+        <div class="filter-group">
+            <input type="text" name="name" placeholder="Название книги" value="{{ name_query }}" />
+
             <select name="author" id="author-filter">
                 <option value="">Все авторы</option>
                 {% for author in authors %}
-                    <option value="{{ author.id }}" {% if author.id|slugify == request.GET.author %}selected{% endif %}>
+                    <option value="{{ author.id }}" {% if author.id == author_id %}selected{% endif %}>
                         {{ author.first_name }} {{ author.last_name }}
                     </option>
                 {% endfor %}
@@ -18,61 +22,55 @@
             <select name="type" id="type-filter">
                 <option value="">Все типы</option>
                 {% for book_type in book_types %}
-                    <option value="{{ book_type.id }}" {% if book_type.id|slugify == request.GET.type %}selected{% endif %}>
+                    <option value="{{ book_type.id }}" {% if book_type.id == type_id %}selected{% endif %}>
                         {{ book_type.book_type }}
                     </option>
                 {% endfor %}
             </select>
 
-            <input type="number" name="min_price" placeholder="Мин цена" value="{{ request.GET.min_price }}">
-            <input type="number" name="max_price" placeholder="Макс цена" value="{{ request.GET.max_price }}">
-            <button type="submit">Сортировать</button>
+            <input type="number" name="min_price" placeholder="Мин. цена" value="{{ min_price }}" step="0.01" />
+
+            <input type="number" name="max_price" placeholder="Макс. цена" value="{{ max_price }}" step="0.01" />
+
+            <button type="submit">Фильтровать</button>
         </div>
     </form>
 
-    <!-- Сетка книг -->
     <div class="books-grid">
         {% for book in books %}
             <div class="book-card">
-                <a href="{% url 'book' book.id %}">
-                    <h3>{{ book.name }}</h3>
-                </a>
-                <p><strong>Автор:</strong>
-                    {% for author in book.authors.all %}
-                        {{ author.first_name }} {{ author.last_name }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                </p>
+                <h3>
+                    <a href="{% url 'book_detail' book_id=book.id %}">
+                        {{ book.name }}
+                    </a>
+                </h3>
                 <p><strong>Цена:</strong> {{ book.price }} ₽</p>
 
+            {% if user.is_authenticated %}
                 <div class="cart-controls">
-                    <button onclick="updateCart('{{ book.id }}', -1)">−</button>
-                    <span class="quantity" id="qty-{{ book.id }}">0</span>
-                    <button onclick="updateCart('{{ book.id }}', 1)">+</button>
+                {% with cart_data|get_item:book.id as qty %}
+                    {% if qty %}
+
+                        <form action="{% url 'remove_from_cart' %}" method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="book_id" value="{{ book.id }}">
+                            <button type="submit">-</button>
+                        </form>
+                        <p>{{ qty }}</p>
+                    {% endif %}
+                {% endwith %}
+
+                <form action="{% url 'add_to_cart' %}" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="book_id" value="{{ book.id }}">
+                    <button type="submit">+</button>
+                </form>
                 </div>
+            {% else %}
+                    <p><a href="{% url 'login' %}">Войдите</a>, чтобы добавлять книги в корзину</p>
+                {% endif %}
             </div>
-        {% empty %}
-            <p>Нет доступных книг.</p>
         {% endfor %}
     </div>
 </div>
-
-<script>
-function updateCart(bookId, delta) {
-    fetch(`/carts/update/${bookId}/${delta}/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Ошибка сети");
-            }
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById(`qty-${bookId}`).textContent = data.quantity;
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Не удалось обновить корзину');
-        });
-}
-</script>
-
 {% endblock %}

@@ -1,43 +1,42 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <div class="container">
     <h1>{{ book.name }}</h1>
     <p><strong>Автор:</strong>
         {% for author in book.authors.all %}
-            {{ author.first_name }} {{ author.last_name }}{% if not forloop.last %}, {% endif %}
+            {{ author.first_name }} {{ author.last_name }}
+            {% if not forloop.last %}, {% endif %}
         {% endfor %}
     </p>
     <p><strong>Тип:</strong>
         {% for t in book.book_type.all %}
-            {{ t.book_type }}{% if not forloop.last %}, {% endif %}
+            {{ t.book_type }}
+            {% if not forloop.last %}, {% endif %}
         {% endfor %}
     </p>
     <p><strong>Цена:</strong> {{ book.price }} ₽</p>
 
-    <div class="cart-controls">
-        <button onclick="updateCart('{{ book.id }}', -1)">−</button>
-        <span class="quantity" id="qty-{{ book.id }}">{{ cart_item_quantity|default:0 }}</span>
-        <button onclick="updateCart('{{ book.id }}', 1)">+</button>
-
-    </div>
+    {% if user.is_authenticated %}
+        <div class="cart-controls">
+            <form action="{% url 'remove_from_cart' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="book_id" value="{{ book.id }}">
+                <button type="submit">-</button>
+            </form>
+            {% if cart_item %}
+                <span>{{ cart_item.quantity }}</span>
+            {% else %}
+                <span>0</span>
+            {% endif %}
+            <form action="{% url 'add_to_cart' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="book_id" value="{{ book.id }}">
+                <button type="submit">+</button>
+            </form>
+        </div>
+    {% else %}
+        <p><a href="{% url 'login' %}">Войдите</a>, чтобы добавлять книги в корзину</p>
+    {% endif %}
 </div>
-
-<script>
-function updateCart(bookId, delta) {
-    fetch(`/carts/update/${bookId}/${delta}/`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Ошибка сети");
-            }
-            return response.json();
-        })
-        .then(data => {
-            document.getElementById(`qty-${bookId}`).textContent = data.quantity;
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Не удалось обновить корзину');
-        });
-}
-</script>
 {% endblock %}

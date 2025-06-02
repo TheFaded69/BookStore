@@ -1,60 +1,68 @@
 from asyncore import write
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404 , redirect
 from django.http import JsonResponse
 
 from books.models import Book
 from .models import Cart, CartItem
 
-def cart(request):
-    user = request.user
+import json
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from books.models import Book
+from .models import Cart, CartItem
+
+def carts(request):
     try:
+        user = request.user
+
         cart_detail = Cart.objects.get(user=user, deleted=False)
         cart_items = CartItem.objects.filter(cart=cart_detail, deleted=False).select_related('book')
     except Cart.DoesNotExist:
         cart_items = []
 
-    total_price = sum(item.get_total_price() for item in cart_items)
-
     return render(request, 'carts/cart.html', {
-        'cart_items': cart_items,
-        'total_price': total_price
+        'cart_items': cart_items
     })
 
-def update_cart(request, book_id, delta):
-    print(f"User: {request.user}")
-    print(f"Book ID: {book_id}")
-    print(f"Delta: {delta}")
+class AddToCartView(View):
+    def post(self, request, *args, **kwargs):
+        book_id = request.POST.get('book_id')
+        if not book_id:
+            return redirect('book_store')
 
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Пользователь не авторизован'}, status=403)
+        book = get_object_or_404(Book, id=book_id)
 
-    user = request.user
-    book = Book.objects.get(id=book_id)
+        cart, created = Cart.objects.get_or_create(user=request.user)
+        cart_item, created = CartItem.objects.get_or_create(cart=cart, book=book)
 
-    cart, created = Cart.objects.get_or_create(user=user)
-    if created:
-        cart.save()
-
-    cart_item, created = CartItem.objects.get_or_create(cart_id=cart.id, book_id=book.id)
-
-    if not created:
-        print(cart_item.quantity)
-        cart_item.quantity += delta
-        print(cart_item.quantity)
-        if cart_item.quantity <= 0:
-            cart_item.delete()
-            return JsonResponse({
-                'quantity': 0,
-                'cart_count': cart.items.count(),
-            })
-        else:
+        if created:
             cart_item.save()
-    else:
-        cart_item.quantity = 1
+        cart_item.quantity += 1
         cart_item.save()
 
+        return redirect(request.META.get('HTTP_REFERER', 'book_store'))
 
-    return JsonResponse({
-        'quantity': cart_item.quantity,
-    })
+
+class RemoveFromCartView(View):
+    def post(self, request, *args, **kwargs):
+        book_id = request.POST.get('book_id')
+        if not book_id:
+            return redirect('book_store')
+
+        book = get_object_or_404(Book, id=book_id)
+
+        try:
+            cart = request.user.carts.get()
+            cart_item = cart.items.get(book=book)
+            if cart_item.quantity > 1:
+                cart_item.quantity -= 1
+                cart_item.save()
+            else:
+                cart_item.delete()
+        except (Cart.DoesNotExist, CartItem.DoesNotExist):
+            pass
+
+        return redirect(request.META.get('HTTP_REFERER', 'book_store'))
